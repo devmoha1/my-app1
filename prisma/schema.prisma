@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with roles
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
+  password      String? // For email/password auth
+  image         String?
+  phone         String?
+  bio           String?
+  role          UserRole   @default(CANDIDATE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  candidateProfile   CandidateProfile?
+  recruiterProfile   RecruiterProfile?
+  applications       Application[]
+  savedJobs          SavedJob[]
+  ownedCompany       Company?
+  posts              Post[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  CANDIDATE
+  RECRUITER
+  ADMIN
+}
+
+// Candidate Profile
+model CandidateProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cvUrl           String?
+  headline        String?
+  location        String?
+  category        String?
+  experience      String?
+  education       String?
+  skills          String[] @default([])
+  lookingForJob   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Recruiter Profile
+model RecruiterProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id])
+  jobTitle        String?
+  department      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+// Company model
+model Company {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  logo            String?
+  website         String?
+  email           String?
+  phone           String?
+  location        String
+  employeeCount   String?
+  industry        String?
+  ownerId         String   @unique
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  jobs            Job[]
+  recruiterProfiles RecruiterProfile[]
+  
+  @@index([ownerId])
+  @@index([slug])
+}
+
+// Job model
+model Job {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  description     String
+  requirements    String[]
+  benefits        String[]
+  category        JobCategory
+  location        String
+  salary          Int? // In FCFA
+  salaryMax       Int?
+  contractType    ContractType
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       String
+  published       Boolean  @default(true)
+  featured        Boolean  @default(false)
+  viewCount       Int      @default(0)
+  applications    Application[]
+  savedBy         SavedJob[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId])
+  @@index([category])
+  @@index([location])
+  @@index([contractType])
+  @@index([published])
+}
+
+enum JobCategory {
+  INFORMATIQUE
+  TELECOM
+  BANQUE
+  BTP
+  MARKETING
+  LOGISTIQUE
+  SANTE
+  EDUCATION
+  VENTE
+  RESSOURCES_HUMAINES
+  FINANCE
+  AUTRE
+}
+
+enum ContractType {
+  CDI
+  CDD
+  STAGE
+  FREELANCE
+  ALTERNANCE
+}
+
+// Application model
+model Application {
+  id              String   @id @default(cuid())
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidateId     String
+  candidate       User     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  cvUrl           String?
+  coverLetter     String?
+  status          ApplicationStatus @default(PENDING)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([jobId, candidateId])
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([status])
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  REJECTED
+  ACCEPTED
+}
+
+// Saved Jobs model
+model SavedJob {
+  id              String   @id @default(cuid())
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([jobId, userId])
+  @@index([jobId])
+  @@index([userId])
+}
+
+// Blog Post model
+model Post {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String
+  excerpt         String?
+  author          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId        String
+  published       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([published])
+}
