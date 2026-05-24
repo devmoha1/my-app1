@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       id: user.id,
       email: user.email,
       role: user.role,
-      name: user.name,
-      image: user.image,
+      name: user.name || undefined,
+      image: user.image || undefined,
     });
 
     // Set auth cookie
